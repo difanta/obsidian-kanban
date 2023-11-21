@@ -1,5 +1,5 @@
 import update from 'immutability-helper';
-import { Content, List, Parent, Root } from 'mdast';
+import { Content, Heading, List, Parent, Root } from 'mdast';
 import { ListItem, Paragraph } from 'mdast-util-from-markdown/lib';
 import { toString } from 'mdast-util-to-string';
 import { stringifyYaml } from 'obsidian';
@@ -197,6 +197,19 @@ export function astToUnhydratedBoard(
       const headingBoundary = getNodeContentBoundary(child as Parent);
       const title = getStringFromBoundary(md, headingBoundary);
 
+      let blockId: string | undefined = undefined;
+      visit(
+        child,
+        (node) => {
+          const genericNode = node as ValueNode;
+          return genericNode.type === 'blockid';
+        },
+        (node) => {
+          const genericNode = node as ValueNode;
+          blockId = genericNode.value;
+        }
+      );
+
       let shouldMarkItemsComplete = false;
 
       const list = getNextOfType(root.children, index, 'list', (child) => {
@@ -240,6 +253,7 @@ export function astToUnhydratedBoard(
           data: {
             ...parseLaneTitle(title),
             shouldMarkItemsComplete,
+            blockId,
           },
         });
       } else {
@@ -256,6 +270,7 @@ export function astToUnhydratedBoard(
           data: {
             ...parseLaneTitle(title),
             shouldMarkItemsComplete,
+            blockId,
           },
         });
       }
@@ -387,7 +402,7 @@ function laneToMd(lane: Lane) {
   lines.push(
     `## ${replaceNewLines(
       laneTitleWithMaxItems(lane.data.title, lane.data.maxItems)
-    )}`
+    )}${lane.data.blockId ? ` ^${lane.data.blockId}` : ''}`
   );
 
   lines.push('');

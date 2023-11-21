@@ -24,6 +24,7 @@ import { t } from './lang/helpers';
 import { basicFrontmatter, frontMatterKey } from './parsers/common';
 import { KanbanSettings, KanbanSettingsTab } from './Settings';
 import { StateManager } from './StateManager';
+import { register } from './googleApi/updater';
 
 interface WindowRegistry {
   viewMap: Map<string, KanbanView>;
@@ -124,6 +125,8 @@ export default class KanbanPlugin extends Plugin {
 
     window.addEventListener('keydown', this.handleShift);
     window.addEventListener('keyup', this.handleShift);
+
+    register(this);
   }
 
   handleShift = (e: KeyboardEvent) => {

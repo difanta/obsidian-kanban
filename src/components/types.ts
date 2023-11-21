@@ -12,6 +12,7 @@ export enum LaneSort {
 }
 
 export interface LaneData {
+  blockId?: string;
   shouldMarkItemsComplete?: boolean;
   title: string;
   maxItems?: number;

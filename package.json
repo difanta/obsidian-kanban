@@ -39,6 +39,7 @@
     "obsidian-plugin-cli": "^0.8.1",
     "prettier": "^2.3.2",
     "replace": "^1.2.1",
+    "ts-treemap": "^1.1.0",
     "tslib": "^2.4.0",
     "typescript": "^4.7.4"
   },
@@ -53,6 +54,7 @@
     "fast-json-patch": "^3.1.0",
     "file-selector": "^0.2.4",
     "fuse.js": "^6.5.3",
+    "google-auth-library": "^9.2.0",
     "immutability-helper": "^3.1.1",
     "immutable-json-patch": "^1.1.2",
     "is-plain-object": "^5.0.0",
@@ -66,11 +68,13 @@
     "micromark-util-types": "^1.0.1",
     "monkey-around": "^2.1.0",
     "obsidian-daily-notes-interface": "^0.9.4",
+    "open": "^8.4.2",
     "preact": "^10.8.2",
     "react": "npm:@preact/compat",
     "react-colorful": "^5.6.1",
     "react-cool-onclickoutside": "^1.6.1",
     "react-dom": "npm:@preact/compat",
+    "server-destroy": "^1.0.1",
     "unist-util-visit": "^4.1.0"
   },
   "importSort": {

@@ -1,7 +1,9 @@
 import update, { Spec } from 'immutability-helper';
 import {
   App,
+  ButtonComponent,
   Modal,
+  Platform,
   PluginSettingTab,
   Setting,
   ToggleComponent,
@@ -48,6 +50,10 @@ import {
   renderDateSettings,
 } from './settings/DateColorSettings';
 
+import { setRT, setAT, setET, getRT } from './googleApi/LocalStorage';
+
+import { LoginGoogle } from './googleApi/GoogleAuth';
+
 const numberRegEx = /^\d+(?:\.\d+)?$/;
 
 export type KanbanFormats = 'basic';
@@ -89,6 +95,12 @@ export interface KanbanSettings {
 
   'tag-colors'?: TagColorKey[];
   'date-colors'?: DateColorKey[];
+
+  googleRefreshToken?: string;
+  googleClientId?: string;
+  googleClientSecret?: string;
+  refreshInterval?: number;
+  referenceFile?: string;
 }
 
 export const settingKeyLookup: Record<keyof KanbanSettings, true> = {
@@ -126,6 +138,11 @@ export const settingKeyLookup: Record<keyof KanbanSettings, true> = {
   'show-search': true,
   'tag-colors': true,
   'date-colors': true,
+  googleRefreshToken: true,
+  googleClientId: true,
+  googleClientSecret: true,
+  refreshInterval: true,
+  referenceFile: true,
 };
 
 export type SettingRetriever = <K extends keyof KanbanSettings>(
@@ -1548,6 +1565,178 @@ export class SettingsManager {
         }
       });
     });
+
+    contentEl.createEl('h4', { text: 'Google Client Settings' });
+
+    new Setting(contentEl).setName('Google Client Id').addText((text) => {
+      const [value, globalValue] = this.getSetting('googleClientId', local);
+
+      if (value || globalValue) {
+        text.setValue((value || globalValue) as string);
+      }
+
+      text.setPlaceholder((globalValue as string) || '');
+
+      text.onChange((newValue) => {
+        if (newValue) {
+          this.applySettingsUpdate({
+            googleClientId: {
+              $set: newValue,
+            },
+          });
+        } else {
+          this.applySettingsUpdate({
+            $unset: ['googleClientId'],
+          });
+        }
+      });
+    });
+
+    new Setting(contentEl).setName('Google Client Secret').addText((text) => {
+      const [value, globalValue] = this.getSetting('googleClientSecret', local);
+
+      if (value || globalValue) {
+        text.setValue((value || globalValue) as string);
+      }
+
+      text.setPlaceholder((globalValue as string) || '');
+
+      text.onChange((newValue) => {
+        if (newValue) {
+          this.applySettingsUpdate({
+            googleClientSecret: {
+              $set: newValue,
+            },
+          });
+        } else {
+          this.applySettingsUpdate({
+            $unset: ['googleClientSecret'],
+          });
+        }
+      });
+    });
+
+    const AuthSetting = new Setting(contentEl);
+
+    const createLogOutButton = (button: ButtonComponent) => {
+      button.setButtonText('Logout');
+      button.onClick(async () => {
+        setRT('');
+        setAT('');
+        setET(0);
+        button.buttonEl.remove();
+
+        AuthSetting.setName('Login');
+        AuthSetting.setDesc('Login to your Google Account');
+        AuthSetting.addButton((button: ButtonComponent) => {
+          button.setButtonText('Login');
+          button.onClick(async () => {
+            LoginGoogle(this.plugin);
+          });
+        });
+      });
+    };
+
+    if (Platform.isDesktop) {
+      if (getRT()) {
+        AuthSetting.setName('Logout');
+        AuthSetting.setDesc('Logout off your Google Account');
+        AuthSetting.addButton(createLogOutButton);
+      } else {
+        AuthSetting.setName('Login');
+        AuthSetting.setDesc('Login to your Google Account');
+        AuthSetting.addButton((button: ButtonComponent) => {
+          button.setButtonText('Login');
+          button.onClick(async (event) => {
+            LoginGoogle(this.plugin);
+
+            let count = 0;
+            const intId = setInterval(() => {
+              count++;
+
+              if (count > 900) {
+                clearInterval(intId);
+              } else if (getRT()) {
+                clearInterval(intId);
+                button.buttonEl.remove();
+                AuthSetting.setName('Logout');
+                AuthSetting.setDesc('Logout off your Google Account');
+                AuthSetting.addButton(createLogOutButton);
+              }
+            }, 200);
+          });
+        });
+      }
+    } else {
+      new Setting(contentEl)
+        .setName('Refresh Token')
+        .setDesc('Google Refresh Token from OAuth')
+        .addText((text) =>
+          text
+            .setPlaceholder('Enter refresh token')
+            .setValue(this.plugin.settings.googleRefreshToken)
+            .onChange(async (value) => {
+              this.plugin.settings.googleRefreshToken = value;
+              setRT(value);
+            })
+        );
+    }
+
+    new Setting(contentEl)
+      .setName('Refresh Interval')
+      .setDesc('Google Task download frequency')
+      .addText((text) => {
+        const [value, globalValue] = this.getSetting('refreshInterval', local);
+
+        if (value || globalValue) {
+          text.setValue((value || globalValue) as string);
+        }
+
+        text.setPlaceholder((globalValue as string) || '60');
+
+        text.onChange((newValue) => {
+          if (newValue) {
+            this.applySettingsUpdate({
+              refreshInterval: {
+                $set: parseInt(newValue),
+              },
+            });
+          } else {
+            this.applySettingsUpdate({
+              refreshInterval: {
+                $set: 60,
+              },
+            });
+          }
+        });
+      });
+
+    new Setting(contentEl)
+      .setName('Reference File')
+      .setDesc('File to sync with Google Task')
+      .addText((text) => {
+        const [value, globalValue] = this.getSetting('referenceFile', local);
+
+        if (value || globalValue) {
+          text.setValue((value || globalValue) as string);
+        }
+
+        text.setPlaceholder((globalValue as string) || '');
+
+        text.onChange((newValue) => {
+          if (newValue) {
+            this.applySettingsUpdate({
+              referenceFile: {
+                $set: newValue,
+              },
+            });
+          } else {
+            this.applySettingsUpdate({
+              $unset: ['referenceFile'],
+            });
+          }
+        });
+      });
   }
 
   cleanUp() {

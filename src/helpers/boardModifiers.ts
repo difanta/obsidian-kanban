@@ -5,6 +5,7 @@ import { Path } from 'src/dnd/types';
 import {
   appendEntities,
   getEntityFromPath,
+  getEntityStackFromPath,
   insertEntity,
   moveEntity,
   prependEntities,
@@ -15,7 +16,7 @@ import {
 import { StateManager } from 'src/StateManager';
 
 import { generateInstanceId } from '../components/helpers';
-import { Item, Lane } from '../components/types';
+import { DataTypes, Item, Lane } from '../components/types';
 
 export interface BoardModifiers {
   appendItems: (path: Path, items: Item[]) => void;
@@ -59,57 +60,67 @@ export function getBoardModifiers(stateManager: StateManager): BoardModifiers {
 
   return {
     appendItems: (path: Path, items: Item[]) => {
-      items.forEach((item) =>
-        stateManager.app.workspace.trigger(
-          'kanban:card-added',
-          stateManager.file,
-          item
-        )
-      );
-
-      stateManager.setState((boardData) =>
-        appendEntities(boardData, path, items)
-      );
+      stateManager.setState((boardData) => {
+        const lane = getEntityFromPath(boardData, path);
+        items.forEach((item) =>
+          stateManager.app.workspace.trigger(
+            'kanban:card-added',
+            stateManager.file,
+            item,
+            lane
+          )
+        );
+        return appendEntities(boardData, path, items);
+      });
     },
 
     prependItems: (path: Path, items: Item[]) => {
-      items.forEach((item) =>
-        stateManager.app.workspace.trigger(
-          'kanban:card-added',
-          stateManager.file,
-          item
-        )
-      );
+      stateManager.setState((boardData) => {
+        const lane = getEntityFromPath(boardData, path);
 
-      stateManager.setState((boardData) =>
-        prependEntities(boardData, path, items)
-      );
+        items.forEach((item) =>
+          stateManager.app.workspace.trigger(
+            'kanban:card-added',
+            stateManager.file,
+            item,
+            lane
+          )
+        );
+
+        return prependEntities(boardData, path, items);
+      });
     },
 
     insertItems: (path: Path, items: Item[]) => {
-      items.forEach((item) =>
-        stateManager.app.workspace.trigger(
-          'kanban:card-added',
-          stateManager.file,
-          item
-        )
-      );
+      stateManager.setState((boardData) => {
+        const lane = getEntityFromPath(boardData, path);
 
-      stateManager.setState((boardData) =>
-        insertEntity(boardData, path, items)
-      );
+        items.forEach((item) =>
+          stateManager.app.workspace.trigger(
+            'kanban:card-added',
+            stateManager.file,
+            item,
+            lane
+          )
+        );
+
+        return insertEntity(boardData, path, items);
+      });
     },
 
     splitItem: (path: Path, items: Item[]) => {
-      items.forEach((item) =>
-        stateManager.app.workspace.trigger(
-          'kanban:card-added',
-          stateManager.file,
-          item
-        )
-      );
-
       stateManager.setState((boardData) => {
+        const lane = getEntityFromPath(boardData, path);
+
+        items.forEach((item) =>
+          stateManager.app.workspace.trigger(
+            'kanban:card-added',
+            stateManager.file,
+            item,
+            lane
+          )
+        );
+
         return insertEntity(removeEntity(boardData, path), path, items);
       });
     },
@@ -206,7 +217,8 @@ export function getBoardModifiers(stateManager: StateManager): BoardModifiers {
         stateManager.app.workspace.trigger(
           'kanban:lane-cards-archived',
           stateManager.file,
-          items
+          items,
+          lane
         );
 
         try {
@@ -235,12 +247,18 @@ export function getBoardModifiers(stateManager: StateManager): BoardModifiers {
 
     deleteEntity: (path: Path) => {
       stateManager.setState((boardData) => {
-        const entity = getEntityFromPath(boardData, path);
+        const stack = getEntityStackFromPath(boardData, path);
+        const entity = stack[stack.length - 1]; // last entity is the target
+        const lane =
+          entity.type === DataTypes['Item']
+            ? stack[stack.length - 2]
+            : undefined; // if the entity is an item we want to extract also the lane, which is the penultimate entity
 
         stateManager.app.workspace.trigger(
           `kanban:${entity.type}-deleted`,
           stateManager.file,
-          entity
+          entity,
+          lane
         );
 
         return removeEntity(boardData, path);
@@ -249,13 +267,17 @@ export function getBoardModifiers(stateManager: StateManager): BoardModifiers {
 
     updateItem: (path: Path, item: Item) => {
       stateManager.setState((boardData) => {
-        const oldItem = getEntityFromPath(boardData, path);
+        const stack = getEntityStackFromPath(boardData, path);
+        const oldItem = stack[stack.length - 1]; // last entity is the target
+        const lane = stack[stack.length - 2]; // we want to extract also the lane, which is the penultimate entity
+        // supposing lane doesnt change ??
 
         stateManager.app.workspace.trigger(
           'kanban:card-updated',
           stateManager.file,
           oldItem,
-          item
+          item,
+          lane
         );
 
         return updateParentEntity(boardData, path, {
@@ -270,13 +292,16 @@ export function getBoardModifiers(stateManager: StateManager): BoardModifiers {
 
     archiveItem: (path: Path) => {
       stateManager.setState(async (boardData) => {
-        const item = getEntityFromPath(boardData, path);
+        const stack = getEntityStackFromPath(boardData, path);
+        const item = stack[stack.length - 1]; // last entity is the target
+        const lane = stack[stack.length - 2]; // we want to extract also the lane, which is the penultimate entity
 
         stateManager.app.workspace.trigger(
           'kanban:card-archived',
           stateManager.file,
           path,
-          item
+          item,
+          lane
         );
 
         try {
@@ -300,13 +325,19 @@ export function getBoardModifiers(stateManager: StateManager): BoardModifiers {
 
     duplicateEntity: (path: Path) => {
       stateManager.setState((boardData) => {
-        const entity = getEntityFromPath(boardData, path);
+        const stack = getEntityStackFromPath(boardData, path);
+        const entity = stack[stack.length - 1]; // last entity is the target
+        const lane =
+          entity.type === DataTypes['Item']
+            ? stack[stack.length - 2]
+            : undefined; // if the entity is an item we want to extract also the lane, which is the penultimate entity
 
         stateManager.app.workspace.trigger(
           `kanban:${entity.type}-duplicated`,
           stateManager.file,
           path,
-          entity
+          entity,
+          lane
         );
 
         const entityWithNewID = update(entity, {
@@ -318,5 +349,5 @@ export function getBoardModifiers(stateManager: StateManager): BoardModifiers {
         return insertEntity(boardData, path, [entityWithNewID]);
       });
     },
-  };
+  } as BoardModifiers;
 }

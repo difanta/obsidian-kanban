@@ -299,6 +299,13 @@ export class StateManager {
         this.getSettingRaw('show-search', suppliedSettings) ?? true,
       'tag-colors': this.getSettingRaw('tag-colors', suppliedSettings) ?? [],
       'date-colors': this.getSettingRaw('date-colors', suppliedSettings) ?? [],
+      googleClientId: this.getSettingRaw('googleClientId', suppliedSettings),
+      googleClientSecret: this.getSettingRaw(
+        'googleClientSecret',
+        suppliedSettings
+      ),
+      refreshInterval: this.getSettingRaw('refreshInterval', suppliedSettings),
+      referenceFile: this.getSettingRaw('referenceFile', suppliedSettings),
     };
   }
 

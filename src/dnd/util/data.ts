@@ -15,6 +15,19 @@ export function getEntityFromPath(root: Nestable, path: Path): Nestable {
   return root;
 }
 
+export function getEntityStackFromPath(
+  root: Nestable,
+  path: Path
+): Array<Nestable> {
+  const step = path.length ? path[0] : null;
+
+  if (step !== null && root.children && root.children[step]) {
+    return [root].concat(getEntityFromPath(root.children[step], path.slice(1)));
+  }
+
+  return [root];
+}
+
 export function buildUpdateMutation(path: Path, mutation: Spec<Nestable>) {
   let pathedMutation: Spec<Nestable> = mutation;
 
