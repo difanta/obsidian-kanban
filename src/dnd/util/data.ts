@@ -22,7 +22,9 @@ export function getEntityStackFromPath(
   const step = path.length ? path[0] : null;
 
   if (step !== null && root.children && root.children[step]) {
-    return [root].concat(getEntityFromPath(root.children[step], path.slice(1)));
+    return [root].concat(
+      getEntityStackFromPath(root.children[step], path.slice(1))
+    );
   }
 
   return [root];

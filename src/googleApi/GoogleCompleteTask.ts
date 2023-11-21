@@ -9,9 +9,12 @@ import KanbanPlugin from '../main';
 
 export async function GoogleCompleteTask(
   plugin: KanbanPlugin,
-  task: Task
+  task: Task,
+  taskListId: string
 ): Promise<boolean> {
-  task.children?.forEach((subTask) => GoogleCompleteTask(plugin, subTask));
+  task.children?.forEach((subTask) =>
+    GoogleCompleteTask(plugin, subTask, taskListId)
+  );
 
   const requestHeaders: HeadersInit = new Headers();
   requestHeaders.append(
@@ -39,10 +42,11 @@ export async function GoogleCompleteTask(
 
 export async function GoogleCompleteTaskById(
   plugin: KanbanPlugin,
-  taskId: string
+  taskId: string,
+  taskListId: string
 ): Promise<boolean> {
-  const task = await getOneTaskById(plugin, taskId);
-  return await GoogleCompleteTask(plugin, task);
+  const task = await getOneTaskById(plugin, taskId, taskListId);
+  return await GoogleCompleteTask(plugin, task, taskListId);
 }
 
 //=======================================
@@ -51,7 +55,8 @@ export async function GoogleCompleteTaskById(
 
 export async function GoogleUnCompleteTask(
   plugin: KanbanPlugin,
-  task: Task
+  task: Task,
+  taskListId: string
 ): Promise<boolean> {
   const requestHeaders: HeadersInit = new Headers();
   requestHeaders.append(
@@ -75,15 +80,18 @@ export async function GoogleUnCompleteTask(
     return false;
   }
 
-  task.children?.forEach((subTask) => GoogleUnCompleteTask(plugin, subTask));
+  task.children?.forEach((subTask) =>
+    GoogleUnCompleteTask(plugin, subTask, taskListId)
+  );
 
   return true;
 }
 
 export async function GoogleUnCompleteTaskById(
   plugin: KanbanPlugin,
-  taskId: string
+  taskId: string,
+  taskListId: string
 ): Promise<boolean> {
-  const task = await getOneTaskById(plugin, taskId);
-  return await GoogleUnCompleteTask(plugin, task);
+  const task = await getOneTaskById(plugin, taskId, taskListId);
+  return await GoogleUnCompleteTask(plugin, task, taskListId);
 }

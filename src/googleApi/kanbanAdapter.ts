@@ -1,24 +1,24 @@
 import type { Task, TaskInput } from './types';
 import { getOneTaskById } from './ListAllTasks';
-import { Item } from '../components/types';
+import { Item, Lane } from '../components/types';
 import KanbanPlugin from 'src/main';
 
-export function ItemToTaskInput(item: Item): TaskInput {
-  console.log(item);
+export function ItemToTaskInput(item: Item, lane: Lane): TaskInput {
   return {
     title: item.data.title,
-    details: item.data.titleRaw,
-    taskListId: 'boh',
-    due: item.data.metadata.date.toISOString(),
+    details: '',
+    taskListId: lane.data.blockId,
+    due: item.data.metadata.date ? item.data.metadata.date.toISOString() : '',
   };
 }
 
 export async function ItemToTask(
   plugin: KanbanPlugin,
   item: Item,
+  taskListId: string,
   deleting: boolean
 ): Promise<Task> {
-  const oldTask = await getOneTaskById(plugin, item.data.blockId);
+  const oldTask = await getOneTaskById(plugin, item.data.blockId, taskListId);
   if (!oldTask) throw new Error('task not found');
 
   const newTask: Task = JSON.parse(JSON.stringify(oldTask));
@@ -26,7 +26,7 @@ export async function ItemToTask(
   newTask.title = item.data.title;
   newTask.due = item.data.metadata.date
     ? item.data.metadata.date.toISOString()
-    : newTask.due;
+    : '';
   newTask.status = item.data.isComplete ? 'completed' : 'needsAction';
   if (oldTask.status === 'needsAction' && item.data.isComplete)
     newTask.completed = new Date().toISOString();

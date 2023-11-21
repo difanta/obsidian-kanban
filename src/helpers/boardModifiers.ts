@@ -59,9 +59,11 @@ export function getBoardModifiers(stateManager: StateManager): BoardModifiers {
   };
 
   return {
-    appendItems: (path: Path, items: Item[]) => {
+    appendItems: async (path: Path, items: Item[]) => {
       stateManager.setState((boardData) => {
-        const lane = getEntityFromPath(boardData, path);
+        const stack = getEntityStackFromPath(boardData, path);
+        const lane = stack[stack.length - 2];
+
         items.forEach((item) =>
           stateManager.app.workspace.trigger(
             'kanban:card-added',
@@ -76,7 +78,8 @@ export function getBoardModifiers(stateManager: StateManager): BoardModifiers {
 
     prependItems: (path: Path, items: Item[]) => {
       stateManager.setState((boardData) => {
-        const lane = getEntityFromPath(boardData, path);
+        const stack = getEntityStackFromPath(boardData, path);
+        const lane = stack[stack.length - 2];
 
         items.forEach((item) =>
           stateManager.app.workspace.trigger(
@@ -93,7 +96,8 @@ export function getBoardModifiers(stateManager: StateManager): BoardModifiers {
 
     insertItems: (path: Path, items: Item[]) => {
       stateManager.setState((boardData) => {
-        const lane = getEntityFromPath(boardData, path);
+        const stack = getEntityStackFromPath(boardData, path);
+        const lane = stack[stack.length - 2];
 
         items.forEach((item) =>
           stateManager.app.workspace.trigger(
@@ -110,7 +114,8 @@ export function getBoardModifiers(stateManager: StateManager): BoardModifiers {
 
     splitItem: (path: Path, items: Item[]) => {
       stateManager.setState((boardData) => {
-        const lane = getEntityFromPath(boardData, path);
+        const stack = getEntityStackFromPath(boardData, path);
+        const lane = stack[stack.length - 2];
 
         items.forEach((item) =>
           stateManager.app.workspace.trigger(

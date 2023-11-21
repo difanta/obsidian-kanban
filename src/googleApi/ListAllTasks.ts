@@ -5,10 +5,9 @@ import KanbanPlugin from 'src/main';
 
 export async function getOneTaskById(
   plugin: KanbanPlugin,
-  taskId: string
+  taskId: string,
+  taskListId: string
 ): Promise<Task> {
-  const taskLists = await getAllTaskLists(plugin);
-
   const requestHeaders: HeadersInit = new Headers();
   requestHeaders.append(
     'Authorization',
@@ -16,25 +15,23 @@ export async function getOneTaskById(
   );
   requestHeaders.append('Content-Type', 'application/json');
 
-  for (let i = 0; i < taskLists.length; i++) {
-    try {
-      const response = await fetch(
-        `https://tasks.googleapis.com/tasks/v1/lists/${taskLists[i].id}/tasks/${taskId}`,
-        {
-          method: 'GET',
-          headers: requestHeaders,
-        }
-      );
-      if (response.status == 200) {
-        const task: Task = await response.json();
-        if (task.due) {
-          task.due = window.moment(task.due).add(12, 'hour').toISOString();
-        }
-        return task;
+  try {
+    const response = await fetch(
+      `https://tasks.googleapis.com/tasks/v1/lists/${taskListId}/tasks/${taskId}`,
+      {
+        method: 'GET',
+        headers: requestHeaders,
       }
-    } catch (error) {
-      console.error(error);
+    );
+    if (response.status == 200) {
+      const task: Task = await response.json();
+      if (task.due) {
+        task.due = window.moment(task.due).add(12, 'hour').toISOString();
+      }
+      return task;
     }
+  } catch (error) {
+    console.error(error);
   }
 }
 
