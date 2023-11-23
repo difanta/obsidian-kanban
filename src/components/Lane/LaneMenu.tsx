@@ -234,7 +234,7 @@ export function useSettingsMenu({
           .setTitle(linked ? 'Unlink from Google Task' : 'Link to Google Task')
           .onClick(() => {
             linked
-              ? boardModifiers.unlinkFromGTask(path)
+              ? boardModifiers.unlinkFromGTask(path, view.plugin, view.file)
               : new LinkToGTaskList(view, path, lane, boardModifiers).open();
           });
       });
@@ -289,8 +289,7 @@ export class LinkToGTaskList extends Modal {
     });
     btnDiv.createEl('button', { text: 'Link', type: 'submit' }, (el) => {
       el.onclick = async () => {
-        this.select.value &&
-          this.boardModifiers.linkToGTask(this.path, this.select.value);
+        this.select.value && this.linkToGTask();
         this.close();
       };
       el.setAttribute('style', 'margin-left: 0.5em; width: 4.5em');
@@ -300,5 +299,14 @@ export class LinkToGTaskList extends Modal {
   onClose() {
     const { contentEl } = this;
     contentEl.empty();
+  }
+
+  linkToGTask() {
+    this.boardModifiers.linkToGTask(
+      this.path,
+      this.select.value,
+      this.view.plugin,
+      this.view.file
+    );
   }
 }

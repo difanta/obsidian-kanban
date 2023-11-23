@@ -1,5 +1,5 @@
 import update from 'immutability-helper';
-import { moment } from 'obsidian';
+import { moment, TFile } from 'obsidian';
 
 import { Path } from 'src/dnd/types';
 import {
@@ -18,7 +18,12 @@ import { StateManager } from 'src/StateManager';
 import { generateInstanceId } from '../components/helpers';
 import { DataTypes, Item, Lane } from '../components/types';
 import { HeadlessStateManager } from 'src/googleApi/HeadlessStateManager';
-import { syncLanesFromGTask } from 'src/googleApi/updater';
+import {
+  addLaneToSettings,
+  removeLaneFromSettings,
+  syncLanesFromGTask,
+} from 'src/googleApi/updater';
+import KanbanPlugin from 'src/main';
 
 export interface BoardModifiers {
   appendItems: (path: Path, items: Item[]) => void;
@@ -36,8 +41,13 @@ export interface BoardModifiers {
   updateItem: (path: Path, item: Item) => void;
   archiveItem: (path: Path) => void;
   duplicateEntity: (path: Path) => void;
-  linkToGTask: (path: Path, taskList_id: string) => void;
-  unlinkFromGTask: (path: Path) => void;
+  linkToGTask: (
+    path: Path,
+    taskList_id: string,
+    plugin: KanbanPlugin,
+    file: TFile
+  ) => void;
+  unlinkFromGTask: (path: Path, plugin: KanbanPlugin, file: TFile) => void;
 }
 
 export function getBoardModifiers(
@@ -360,12 +370,18 @@ export function getBoardModifiers(
         return insertEntity(boardData, path, [entityWithNewID]);
       });
     },
-    linkToGTask: (path: Path, taskList_id: string) => {
+    linkToGTask: (
+      path: Path,
+      taskList_id: string,
+      kanban: KanbanPlugin,
+      file: TFile
+    ) => {
       stateManager.setState(async (boardData) => {
         const entity = getEntityFromPath(boardData, path);
         entity.data.blockId = taskList_id;
 
-        console.log(entity);
+        await addLaneToSettings(kanban, file, taskList_id);
+
         stateManager.app.workspace.trigger(
           'kanban:lane-updated',
           stateManager.file,
@@ -374,16 +390,19 @@ export function getBoardModifiers(
         return boardData;
       });
     },
-    unlinkFromGTask: (path: Path) => {
-      stateManager.setState((boardData) => {
+    unlinkFromGTask: (path: Path, kanban: KanbanPlugin, file: TFile) => {
+      stateManager.setState(async (boardData) => {
         const entity = getEntityFromPath(boardData, path);
+
+        await removeLaneFromSettings(kanban, file, entity.data.blockId);
+
         stateManager.app.workspace.trigger(
           'kanban:lane-updated',
           stateManager.file,
           entity
         );
         delete entity.data.blockId;
-        console.log(entity);
+
         return boardData;
       });
     },

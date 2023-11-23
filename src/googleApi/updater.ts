@@ -80,6 +80,7 @@ export async function syncLanesFromGTask(
   file_lanes: LinkedFileLanes[],
   plugin: KanbanPlugin
 ) {
+  console.log('sync', plugin.settings);
   const GTaskLists = await getAllTaskLists(plugin);
   await Promise.all(
     file_lanes.map(async ({ file, lane_ids }) => {
@@ -207,7 +208,7 @@ export function findLane(
     : { path: undefined, lane: undefined };
 }
 
-export function removeLane(
+export async function removeLane(
   plugin: KanbanPlugin,
   stateManager: StateManager | HeadlessStateManager,
   lane_id: string,
@@ -215,6 +216,40 @@ export function removeLane(
 ) {
   if (path) getBoardModifiers(stateManager).deleteEntity(path);
   // remove from settings
-  //plugin.settings["file_lanes"].find(({ file, lanes }) => { lanes.splice(lanes.findIndex((_lane_id) => lane_id === lane_id)) })
-  //plugin.saveSettings();
+  await removeLaneFromSettings(plugin, stateManager.file, lane_id);
+}
+
+export async function addLaneToSettings(
+  kanban: KanbanPlugin,
+  file: TFile,
+  taskList_id: string
+) {
+  const file_lanes = kanban.settings['linked_file_lanes'] ?? [];
+  const file_lane = file_lanes.find(
+    (file_lane) => file_lane.file.name === file.name
+  );
+  if (!file_lane) file_lanes.push({ file, lane_ids: [taskList_id] });
+  else file_lane.lane_ids.push(taskList_id);
+  kanban.settings['linked_file_lanes'] = file_lanes;
+  await kanban.saveSettings();
+  console.log('add to', kanban.settings);
+}
+
+export async function removeLaneFromSettings(
+  kanban: KanbanPlugin,
+  file: TFile,
+  taskList_id: string
+) {
+  const file_lanes = kanban.settings['linked_file_lanes'] ?? [];
+  const file_lane = file_lanes.find(
+    (file_lane) => file_lane.file.name === file.name
+  );
+  if (!file_lane) console.error('file lane not found');
+  else
+    file_lane.lane_ids.splice(
+      file_lane.lane_ids.findIndex((lane_id) => lane_id === taskList_id)
+    );
+  kanban.settings['linked_file_lanes'] = file_lanes;
+  await kanban.saveSettings();
+  console.log('remove from', kanban.settings);
 }
