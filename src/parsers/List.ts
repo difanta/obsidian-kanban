@@ -3,6 +3,7 @@ import { JSONPatchDocument, immutableJSONPatch } from 'immutable-json-patch';
 
 import { Board, Item } from 'src/components/types';
 import { StateManager } from 'src/StateManager';
+import { HeadlessStateManager } from 'src/googleApi/HeadlessStateManager';
 
 import { BaseFormat } from './common';
 import {
@@ -16,9 +17,9 @@ import { hydrateBoard, hydratePostOp } from './helpers/hydrateBoard';
 import { parseMarkdown } from './parseMarkdown';
 
 export class ListFormat implements BaseFormat {
-  stateManager: StateManager;
+  stateManager: StateManager | HeadlessStateManager;
 
-  constructor(stateManager: StateManager) {
+  constructor(stateManager: StateManager | HeadlessStateManager) {
     this.stateManager = stateManager;
   }
 
@@ -57,10 +58,18 @@ export class ListFormat implements BaseFormat {
         filtered as JSONPatchDocument
       ) as Board;
 
-      return hydratePostOp(this.stateManager, patchedBoard, filtered);
+      return this.stateManager instanceof StateManager
+        ? hydratePostOp(this.stateManager, patchedBoard, filtered)
+        : (new Promise((resolve) => {
+            resolve(patchedBoard);
+          }) as Promise<Board>);
     }
 
-    return hydrateBoard(this.stateManager, newBoard);
+    return this.stateManager instanceof StateManager
+      ? hydrateBoard(this.stateManager, newBoard)
+      : (new Promise((resolve) => {
+          resolve(newBoard);
+        }) as Promise<Board>);
   }
 
   reparseBoard() {

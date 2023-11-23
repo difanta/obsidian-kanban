@@ -17,6 +17,7 @@ import { StateManager } from 'src/StateManager';
 
 import { generateInstanceId } from '../components/helpers';
 import { DataTypes, Item, Lane } from '../components/types';
+import { HeadlessStateManager } from 'src/googleApi/HeadlessStateManager';
 
 export interface BoardModifiers {
   appendItems: (path: Path, items: Item[]) => void;
@@ -36,7 +37,9 @@ export interface BoardModifiers {
   duplicateEntity: (path: Path) => void;
 }
 
-export function getBoardModifiers(stateManager: StateManager): BoardModifiers {
+export function getBoardModifiers(
+  stateManager: StateManager | HeadlessStateManager
+): BoardModifiers {
   const appendArchiveDate = (item: Item) => {
     const archiveDateFormat = stateManager.getSetting('archive-date-format');
     const archiveDateSeparator = stateManager.getSetting(

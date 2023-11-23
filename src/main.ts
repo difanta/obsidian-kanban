@@ -24,7 +24,7 @@ import { t } from './lang/helpers';
 import { basicFrontmatter, frontMatterKey } from './parsers/common';
 import { KanbanSettings, KanbanSettingsTab } from './Settings';
 import { StateManager } from './StateManager';
-import { register } from './googleApi/updater';
+import { onReady, register } from './googleApi/updater';
 
 interface WindowRegistry {
   viewMap: Map<string, KanbanView>;
@@ -581,7 +581,7 @@ export default class KanbanPlugin extends Plugin {
   registerMonkeyPatches() {
     const self = this;
 
-    app.workspace.onLayoutReady(() => {
+    app.workspace.onLayoutReady(async () => {
       this.register(
         around((app as any).commands, {
           executeCommand(next) {
@@ -597,6 +597,7 @@ export default class KanbanPlugin extends Plugin {
           },
         })
       );
+      await onReady(this);
     });
 
     // Monkey patch WorkspaceLeaf to open Kanbans with KanbanView by default

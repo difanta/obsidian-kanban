@@ -1,6 +1,7 @@
 import { App, TFile } from 'obsidian';
 
 import { Board, FileMetadata, Item } from 'src/components/types';
+import { HeadlessStateManager } from 'src/googleApi/HeadlessStateManager';
 import { t } from 'src/lang/helpers';
 import { KanbanSettings } from 'src/Settings';
 import { StateManager } from 'src/StateManager';
@@ -112,7 +113,7 @@ function getPageData(obj: any, path: string) {
 }
 
 export function getLinkedPageMetadata(
-  stateManager: StateManager,
+  stateManager: StateManager | HeadlessStateManager,
   linkedFile: TFile | null | undefined
 ): { fileMetadata?: FileMetadata; fileMetadataOrder?: string[] } {
   const metaKeys = stateManager.getSetting('metadata-keys');

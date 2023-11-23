@@ -37,9 +37,10 @@ import {
   replaceNewLines,
 } from '../helpers/parser';
 import { parseFragment } from '../parseMarkdown';
+import { HeadlessStateManager } from 'src/googleApi/HeadlessStateManager';
 
 export function listItemToItemData(
-  stateManager: StateManager,
+  stateManager: StateManager | HeadlessStateManager,
   md: string,
   item: ListItem
 ) {
@@ -182,7 +183,7 @@ function isArchiveLane(
 }
 
 export function astToUnhydratedBoard(
-  stateManager: StateManager,
+  stateManager: StateManager | HeadlessStateManager,
   settings: KanbanSettings,
   frontmatter: Record<string, any>,
   root: Root,
@@ -292,7 +293,7 @@ export function astToUnhydratedBoard(
 }
 
 export async function updateItemContent(
-  stateManager: StateManager,
+  stateManager: StateManager | HeadlessStateManager,
   oldItem: Item,
   newContent: string
 ) {
@@ -315,7 +316,8 @@ export async function updateItemContent(
   });
 
   try {
-    await hydrateItem(stateManager, newItem);
+    if (stateManager instanceof StateManager)
+      await hydrateItem(stateManager, newItem);
   } catch (e) {
     console.error(e);
   }
@@ -324,7 +326,7 @@ export async function updateItemContent(
 }
 
 export async function newItem(
-  stateManager: StateManager,
+  stateManager: StateManager | HeadlessStateManager,
   newContent: string,
   isComplete?: boolean,
   forceEdit?: boolean
@@ -348,7 +350,8 @@ export async function newItem(
   };
 
   try {
-    await hydrateItem(stateManager, newItem);
+    if (stateManager instanceof StateManager)
+      await hydrateItem(stateManager, newItem);
   } catch (e) {
     console.error(e);
   }
@@ -356,7 +359,10 @@ export async function newItem(
   return newItem;
 }
 
-export async function reparseBoard(stateManager: StateManager, board: Board) {
+export async function reparseBoard(
+  stateManager: StateManager | HeadlessStateManager,
+  board: Board
+) {
   try {
     return update(board, {
       children: {

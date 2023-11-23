@@ -20,6 +20,7 @@ import {
   gfmTaskListItemFromMarkdown,
 } from './extensions/taskList';
 import { FileAccessor } from './helpers/parser';
+import { HeadlessStateManager } from 'src/googleApi/HeadlessStateManager';
 
 function extractFrontmatter(md: string) {
   let frontmatterStart = -1;
@@ -79,7 +80,7 @@ function extractSettingsFooter(md: string) {
   }
 }
 
-function getExtensions(stateManager: StateManager) {
+function getExtensions(stateManager: StateManager | HeadlessStateManager) {
   return [
     gfmTaskListItem,
     genericWrappedExtension(
@@ -104,7 +105,7 @@ function getExtensions(stateManager: StateManager) {
   ];
 }
 
-function getMdastExtensions(stateManager: StateManager) {
+function getMdastExtensions(stateManager: StateManager | HeadlessStateManager) {
   return [
     gfmTaskListItemFromMarkdown,
     genericWrappedFromMarkdown('date', (text, node) => {
@@ -193,7 +194,10 @@ function getMdastExtensions(stateManager: StateManager) {
   ];
 }
 
-export function parseMarkdown(stateManager: StateManager, md: string) {
+export function parseMarkdown(
+  stateManager: StateManager | HeadlessStateManager,
+  md: string
+) {
   const mdFrontmatter = extractFrontmatter(md);
   const mdSettings = extractSettingsFooter(md);
   const settings = { ...mdSettings };
@@ -225,7 +229,10 @@ export function parseMarkdown(stateManager: StateManager, md: string) {
   };
 }
 
-export function parseFragment(stateManager: StateManager, md: string) {
+export function parseFragment(
+  stateManager: StateManager | HeadlessStateManager,
+  md: string
+) {
   return fromMarkdown(md, {
     extensions: getExtensions(stateManager),
     mdastExtensions: getMdastExtensions(stateManager),
