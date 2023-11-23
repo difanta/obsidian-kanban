@@ -12,7 +12,9 @@ export function ItemToTaskInput(item: Item, lane: Lane): TaskInput {
     title: item.data.title,
     details: '',
     taskListId: lane.data.blockId,
-    due: item.data.metadata.date ? item.data.metadata.date.toISOString() : '',
+    due: item.data.metadata.date
+      ? item.data.metadata.date.utc().toISOString()
+      : '',
   };
 }
 
@@ -70,12 +72,12 @@ export function taskToItem(
   oldItem?: Item
 ): Item {
   const dateFormat = stateManager.getSetting('date-format');
-  const timeFormat = stateManager.getSetting('time-format');
   const dateTrigger = stateManager.getSetting('date-trigger');
   const timeTrigger = stateManager.getSetting('time-trigger');
   const date = task.due ? moment(task.due) : undefined;
   const dateStr = date?.format(dateFormat);
-  const timeStr = date?.format(timeFormat);
+  const timeStr = oldItem?.data.metadata.timeStr;
+  const time = oldItem?.data.metadata.time;
 
   return {
     id: oldItem?.id ?? generateInstanceId(),
@@ -85,14 +87,14 @@ export function taskToItem(
       titleRaw:
         task.title +
         (task.due
-          ? `${dateTrigger}{${dateStr}} ${timeTrigger}{${timeStr}}`
+          ? ` ${dateTrigger}{${dateStr}} ${timeTrigger}{${timeStr}}`
           : ''),
       isComplete: task.status === 'completed' ? true : false,
       titleSearch: task.title,
       metadata: {
         date: date,
         dateStr,
-        time: date,
+        time,
         timeStr,
         fileAccessor: oldItem?.data.metadata.fileAccessor,
         file: oldItem?.data.metadata.file,

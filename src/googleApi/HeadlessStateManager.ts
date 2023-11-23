@@ -9,7 +9,11 @@ import {
 import { Board, BoardTemplate, Item } from '../components/types';
 import { BaseFormat, shouldRefreshBoard } from '../parsers/common';
 import { ListFormat } from '../parsers/List';
-import { defaultDateTrigger, defaultTimeTrigger } from '../settingHelpers';
+import {
+  defaultDateTrigger,
+  defaultRefreshInterval,
+  defaultTimeTrigger,
+} from '../settingHelpers';
 import { KanbanSettings, SettingRetrievers } from '../Settings';
 
 export class HeadlessStateManager {
@@ -276,8 +280,13 @@ export class HeadlessStateManager {
         'googleClientSecret',
         suppliedSettings
       ),
-      refreshInterval: this.getSettingRaw('refreshInterval', suppliedSettings),
-      referenceFile: this.getSettingRaw('referenceFile', suppliedSettings),
+      refreshInterval:
+        this.getSettingRaw('refreshInterval', suppliedSettings) ||
+        defaultRefreshInterval,
+      linked_file_lanes: this.getSettingRaw(
+        'linked_file_lanes',
+        suppliedSettings
+      ),
     };
   }
 

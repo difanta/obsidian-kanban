@@ -26,7 +26,7 @@ export async function getOneTaskById(
     if (response.status == 200) {
       const task: Task = await response.json();
       if (task.due) {
-        task.due = window.moment(task.due).add(12, 'hour').toISOString();
+        task.due = window.moment(task.due).toISOString();
       }
       return task;
     }
@@ -131,7 +131,7 @@ export async function getAllTasksFromList(
 
     resultTaskList.forEach((task: Task) => {
       if (task.due) {
-        task.due = window.moment(task.due).add(12, 'hour').toISOString();
+        task.due = window.moment(task.due).toISOString();
       }
       task.children = resultTaskList.filter(
         (foundTask: Task) => foundTask.parent == task.id

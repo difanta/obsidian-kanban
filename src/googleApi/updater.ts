@@ -11,10 +11,14 @@ import {
 } from './kanbanAdapter';
 import KanbanPlugin from '../main';
 import { HeadlessStateManager } from './HeadlessStateManager';
-import { getAllTaskLists, getAllTasksFromList } from './ListAllTasks';
+import {
+  getAllTaskLists,
+  getAllTasksFromList,
+  getOneTaskById,
+} from './ListAllTasks';
 import { StateManager } from 'src/StateManager';
 import { getBoardModifiers } from 'src/helpers/boardModifiers';
-import { Task, TaskList } from './types';
+import { LinkedFileLanes, Task, TaskList } from './types';
 import { moment } from 'obsidian';
 
 export function register(plugin: KanbanPlugin) {
@@ -72,21 +76,8 @@ export function register(plugin: KanbanPlugin) {
   );
 }
 
-export async function onReady(plugin: KanbanPlugin) {
-  const file = app.vault.getFiles()[0];
-  await syncLanesFromGTask(
-    [
-      {
-        file,
-        lane_ids: ['djVLRFhNMHJoWDBhQ0FCUw'],
-      },
-    ],
-    plugin
-  );
-}
-
 export async function syncLanesFromGTask(
-  file_lanes: { file: TFile; lane_ids: string[] }[],
+  file_lanes: LinkedFileLanes[],
   plugin: KanbanPlugin
 ) {
   const GTaskLists = await getAllTaskLists(plugin);
@@ -111,9 +102,15 @@ export async function syncLanesFromGTask(
           const { path, lane } = findLane(stateManager, lane_id);
 
           // lane was set to sync and does not exist anymore on GTask
-          if (!GTaskList) removeLane(plugin, stateManager, lane_id, path);
+          if (!GTaskList)
+            return removeLane(plugin, stateManager, lane_id, path);
 
-          const tasks = await getAllTasksFromList(plugin, GTaskList.id);
+          let tasks = await getAllTasksFromList(plugin, GTaskList.id);
+          tasks = await Promise.all(
+            tasks.map(async (task) => {
+              return await getOneTaskById(plugin, task.id, GTaskList.id);
+            })
+          );
 
           const { mergedTaskList, mergedLane } = await mergeTaskListAndLane(
             stateManager,
@@ -121,7 +118,7 @@ export async function syncLanesFromGTask(
             lane
           );
 
-          await saveLane(stateManager, mergedLane, path);
+          return await saveLane(stateManager, mergedLane, path);
         })
       );
     })

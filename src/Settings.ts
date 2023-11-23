@@ -35,6 +35,7 @@ import {
   createSearchSelect,
   defaultDateTrigger,
   defaultTimeTrigger,
+  defaultRefreshInterval,
   getListOptions,
 } from './settingHelpers';
 import {
@@ -53,6 +54,7 @@ import {
 import { setRT, setAT, setET, getRT } from './googleApi/LocalStorage';
 
 import { LoginGoogle } from './googleApi/GoogleAuth';
+import { LinkedFileLanes } from './googleApi/types';
 
 const numberRegEx = /^\d+(?:\.\d+)?$/;
 
@@ -100,7 +102,7 @@ export interface KanbanSettings {
   googleClientId?: string;
   googleClientSecret?: string;
   refreshInterval?: number;
-  referenceFile?: string;
+  linked_file_lanes?: LinkedFileLanes[];
 }
 
 export const settingKeyLookup: Record<keyof KanbanSettings, true> = {
@@ -142,7 +144,7 @@ export const settingKeyLookup: Record<keyof KanbanSettings, true> = {
   googleClientId: true,
   googleClientSecret: true,
   refreshInterval: true,
-  referenceFile: true,
+  linked_file_lanes: true,
 };
 
 export type SettingRetriever = <K extends keyof KanbanSettings>(
@@ -1688,54 +1690,24 @@ export class SettingsManager {
       .addText((text) => {
         const [value, globalValue] = this.getSetting('refreshInterval', local);
 
-        if (value || globalValue) {
-          text.setValue((value || globalValue) as string);
-        }
+        if (value || globalValue)
+          text.setValue((value || globalValue).toString());
 
-        text.setPlaceholder((globalValue as string) || '60');
-
-        text.onChange((newValue) => {
-          if (newValue) {
-            this.applySettingsUpdate({
-              refreshInterval: {
-                $set: parseInt(newValue),
-              },
-            });
-          } else {
-            this.applySettingsUpdate({
-              refreshInterval: {
-                $set: 60,
-              },
-            });
-          }
-        });
-      });
-
-    new Setting(contentEl)
-      .setName('Reference File')
-      .setDesc('File to sync with Google Task')
-      .addText((text) => {
-        const [value, globalValue] = this.getSetting('referenceFile', local);
-
-        if (value || globalValue) {
-          text.setValue((value || globalValue) as string);
-        }
-
-        text.setPlaceholder((globalValue as string) || '');
-
-        text.onChange((newValue) => {
-          if (newValue) {
-            this.applySettingsUpdate({
-              referenceFile: {
-                $set: newValue,
-              },
-            });
-          } else {
-            this.applySettingsUpdate({
-              $unset: ['referenceFile'],
-            });
-          }
-        });
+        text
+          .setPlaceholder((globalValue || defaultRefreshInterval).toString())
+          .onChange((newValue) => {
+            if (newValue) {
+              this.applySettingsUpdate({
+                refreshInterval: {
+                  $set: parseInt(newValue),
+                },
+              });
+            } else {
+              this.applySettingsUpdate({
+                $unset: ['refreshInterval'],
+              });
+            }
+          });
       });
   }
 

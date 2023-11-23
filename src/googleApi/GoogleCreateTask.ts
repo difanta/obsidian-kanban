@@ -18,10 +18,6 @@ export async function CreateGoogleTask(
     notes: taskInput.details,
     due: taskInput.due,
   };
-
-  if (taskInput.due) {
-    createBody.due = new Date(taskInput.due).toISOString();
-  }
   try {
     const response = await fetch(
       `https://tasks.googleapis.com/tasks/v1/lists/${taskInput.taskListId}/tasks`,
@@ -33,9 +29,6 @@ export async function CreateGoogleTask(
     );
     if (response.status == 200) {
       const task = await response.json();
-      if (task.due) {
-        task.due = window.moment(task.due).add(12, 'hour').toISOString();
-      }
       return task;
     }
   } catch (error) {
@@ -56,10 +49,6 @@ export async function CreateGoogleTaskFromOldTask(
 
   const listId = newTask.parent;
   delete newTask.parent;
-
-  if (newTask.due) {
-    newTask.due = new Date(newTask.due).toISOString();
-  }
 
   try {
     const response = await fetch(

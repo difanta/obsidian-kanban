@@ -8,6 +8,7 @@ import { KanbanSettings, SettingsManager } from './Settings';
 
 export const defaultDateTrigger = '@';
 export const defaultTimeTrigger = '@@';
+export const defaultRefreshInterval = 60;
 
 export function getFolderChoices(app: App) {
   const folderList: IChoices.Choice[] = [];

@@ -28,7 +28,8 @@ export const LaneHeader = Preact.memo(function LaneHeader({
   dragHandleRef,
   setIsItemInputVisible,
 }: LaneHeaderProps) {
-  const { boardModifiers, stateManager } = Preact.useContext(KanbanContext);
+  const { view, boardModifiers, stateManager } =
+    Preact.useContext(KanbanContext);
   const [isEditing, setIsEditing] = Preact.useState(false);
   const lanePath = useNestedEntityPath(laneIndex);
 
@@ -36,6 +37,7 @@ export const LaneHeader = Preact.memo(function LaneHeader({
     setIsEditing,
     path: lanePath,
     lane,
+    view,
   });
 
   Preact.useEffect(() => {

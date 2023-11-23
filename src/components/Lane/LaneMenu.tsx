@@ -1,5 +1,5 @@
 import update from 'immutability-helper';
-import { Menu, moment } from 'obsidian';
+import { Menu, Modal, moment } from 'obsidian';
 import Preact from 'preact/compat';
 
 import { Path } from 'src/dnd/types';
@@ -8,6 +8,9 @@ import { t } from 'src/lang/helpers';
 import { KanbanContext } from '../context';
 import { c, generateInstanceId } from '../helpers';
 import { Lane, LaneSort, LaneTemplate } from '../types';
+import { KanbanView } from 'src/KanbanView';
+import { getAllTaskLists } from 'src/googleApi/ListAllTasks';
+import { BoardModifiers } from 'src/helpers/boardModifiers';
 
 export type LaneAction = 'delete' | 'archive' | 'archive-items' | null;
 
@@ -73,12 +76,14 @@ export interface UseSettingsMenuParams {
   setIsEditing: Preact.StateUpdater<boolean>;
   path: Path;
   lane: Lane;
+  view: KanbanView;
 }
 
 export function useSettingsMenu({
   setIsEditing,
   path,
   lane,
+  view,
 }: UseSettingsMenuParams) {
   const { stateManager, boardModifiers } = Preact.useContext(KanbanContext);
   const [confirmAction, setConfirmAction] = Preact.useState<LaneAction>(null);
@@ -220,6 +225,18 @@ export function useSettingsMenu({
           .setIcon('lucide-trash-2')
           .setTitle(t('Delete list'))
           .onClick(() => setConfirmAction('delete'));
+      })
+      .addSeparator()
+      .addItem((item) => {
+        const linked = lane.data.blockId;
+        item
+          .setIcon('lucide-move-vertical')
+          .setTitle(linked ? 'Unlink from Google Task' : 'Link to Google Task')
+          .onClick(() => {
+            linked
+              ? boardModifiers.unlinkFromGTask(path)
+              : new LinkToGTaskList(view, path, lane, boardModifiers).open();
+          });
       });
   }, [stateManager, setConfirmAction, path, lane]);
 
@@ -228,4 +245,60 @@ export function useSettingsMenu({
     confirmAction,
     setConfirmAction,
   };
+}
+
+export class LinkToGTaskList extends Modal {
+  view: KanbanView;
+  path: Path;
+  lane: Lane;
+  select: HTMLSelectElement;
+  boardModifiers: BoardModifiers;
+
+  constructor(
+    view: KanbanView,
+    path: Path,
+    lane: Lane,
+    boardModifiers: BoardModifiers
+  ) {
+    super(view.app);
+
+    this.view = view;
+    this.path = path;
+    this.lane = lane;
+    this.boardModifiers = boardModifiers;
+  }
+
+  async onOpen() {
+    const { contentEl } = this;
+
+    contentEl.createEl('h3').setText('Link to Google Task List');
+    this.select = contentEl.createEl('select');
+    this.select.setAttribute('style', 'margin-top: 1em; margin-bottom: 2em');
+
+    const lists = await getAllTaskLists(this.view.plugin);
+    lists.forEach((list) => {
+      this.select.createEl('option', { text: list.title, value: list.id });
+    });
+
+    const btnDiv = contentEl.createDiv();
+    btnDiv.createEl('button', { text: 'Cancel', type: 'button' }, (el) => {
+      el.onclick = async () => {
+        this.close();
+      };
+      el.setAttribute('style', 'margin-right: 0.5em; width: 4.5em');
+    });
+    btnDiv.createEl('button', { text: 'Link', type: 'submit' }, (el) => {
+      el.onclick = async () => {
+        this.select.value &&
+          this.boardModifiers.linkToGTask(this.path, this.select.value);
+        this.close();
+      };
+      el.setAttribute('style', 'margin-left: 0.5em; width: 4.5em');
+    });
+  }
+
+  onClose() {
+    const { contentEl } = this;
+    contentEl.empty();
+  }
 }

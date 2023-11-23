@@ -24,7 +24,8 @@ import { t } from './lang/helpers';
 import { basicFrontmatter, frontMatterKey } from './parsers/common';
 import { KanbanSettings, KanbanSettingsTab } from './Settings';
 import { StateManager } from './StateManager';
-import { onReady, register } from './googleApi/updater';
+import { register, syncLanesFromGTask } from './googleApi/updater';
+import { defaultRefreshInterval } from './settingHelpers';
 
 interface WindowRegistry {
   viewMap: Map<string, KanbanView>;
@@ -45,6 +46,8 @@ export default class KanbanPlugin extends Plugin {
   _loaded: boolean = false;
 
   isShiftPressed: boolean = false;
+
+  GTaskRefresher: number | undefined = undefined;
 
   async loadSettings() {
     this.settings = Object.assign({}, await this.loadData());
@@ -99,8 +102,11 @@ export default class KanbanPlugin extends Plugin {
 
     this.settingsTab = new KanbanSettingsTab(this, {
       onSettingsChange: async (newSettings) => {
+        const refreshUpdated =
+          newSettings.refreshInterval !== this.settings.refreshInterval;
         this.settings = newSettings;
         await this.saveSettings();
+        if (refreshUpdated) this.setRefreshInterval();
 
         // Force a complete re-render when settings change
         this.stateManagers.forEach((stateManager) => {
@@ -127,6 +133,12 @@ export default class KanbanPlugin extends Plugin {
     window.addEventListener('keyup', this.handleShift);
 
     register(this);
+
+    app.workspace.onLayoutReady(async () => {
+      console.log('First run');
+      await syncLanesFromGTask(this.settings['linked_file_lanes'] ?? [], this);
+      this.setRefreshInterval();
+    });
   }
 
   handleShift = (e: KeyboardEvent) => {
@@ -597,7 +609,6 @@ export default class KanbanPlugin extends Plugin {
           },
         })
       );
-      await onReady(this);
     });
 
     // Monkey patch WorkspaceLeaf to open Kanbans with KanbanView by default
@@ -648,6 +659,22 @@ export default class KanbanPlugin extends Plugin {
           };
         },
       })
+    );
+  }
+
+  setRefreshInterval() {
+    console.log('Interval set');
+    if (this.GTaskRefresher) {
+      window.clearInterval(this.GTaskRefresher);
+    }
+    this.registerInterval(
+      (this.GTaskRefresher = window.setInterval(async () => {
+        console.log('Interval run');
+        await syncLanesFromGTask(
+          this.settings['linked_file_lanes'] || [],
+          this
+        );
+      }, (this.settings.refreshInterval || defaultRefreshInterval) * 1000))
     );
   }
 }
