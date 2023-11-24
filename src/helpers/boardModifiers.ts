@@ -377,17 +377,10 @@ export function getBoardModifiers(
       file: TFile
     ) => {
       stateManager.setState(async (boardData) => {
-        const entity = getEntityFromPath(boardData, path);
-        entity.data.blockId = taskList_id;
-
         await addLaneToSettings(kanban, file, taskList_id);
-
-        stateManager.app.workspace.trigger(
-          'kanban:lane-updated',
-          stateManager.file,
-          entity
-        );
-        return boardData;
+        return updateEntity(boardData, path, {
+          data: { blockId: { $set: taskList_id } },
+        });
       });
     },
     unlinkFromGTask: (path: Path, kanban: KanbanPlugin, file: TFile) => {
@@ -395,15 +388,7 @@ export function getBoardModifiers(
         const entity = getEntityFromPath(boardData, path);
 
         await removeLaneFromSettings(kanban, file, entity.data.blockId);
-
-        stateManager.app.workspace.trigger(
-          'kanban:lane-updated',
-          stateManager.file,
-          entity
-        );
-        delete entity.data.blockId;
-
-        return boardData;
+        return updateEntity(boardData, path, { data: { $unset: ['blockId'] } });
       });
     },
   } as BoardModifiers;

@@ -277,7 +277,12 @@ export class LinkToGTaskList extends Modal {
 
     const lists = await getAllTaskLists(this.view.plugin);
     lists.forEach((list) => {
-      this.select.createEl('option', { text: list.title, value: list.id });
+      const option = this.select.createEl('option', {
+        text: list.title,
+        value: list.id,
+      });
+      if (this.lane.data.title === list.title)
+        option.setAttribute('selected', '');
     });
 
     const btnDiv = contentEl.createDiv();

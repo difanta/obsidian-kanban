@@ -19,7 +19,8 @@ import {
 import { StateManager } from 'src/StateManager';
 import { getBoardModifiers } from 'src/helpers/boardModifiers';
 import { LinkedFileLanes, Task, TaskList } from './types';
-import { moment } from 'obsidian';
+import update, { Spec } from 'immutability-helper';
+import { KanbanSettings } from 'src/Settings';
 
 export function register(plugin: KanbanPlugin) {
   plugin.registerEvent(
@@ -107,11 +108,11 @@ export async function syncLanesFromGTask(
             return removeLane(plugin, stateManager, lane_id, path);
 
           let tasks = await getAllTasksFromList(plugin, GTaskList.id);
-          tasks = await Promise.all(
+          /*tasks = await Promise.all(
             tasks.map(async (task) => {
               return await getOneTaskById(plugin, task.id, GTaskList.id);
             })
-          );
+          );*/
 
           const { mergedTaskList, mergedLane } = await mergeTaskListAndLane(
             stateManager,
@@ -225,12 +226,23 @@ export async function addLaneToSettings(
   taskList_id: string
 ) {
   const file_lanes = kanban.settings['linked_file_lanes'] ?? [];
-  const file_lane = file_lanes.find(
+  const file_lane_idx = file_lanes.findIndex(
     (file_lane) => file_lane.file.name === file.name
   );
-  if (!file_lane) file_lanes.push({ file, lane_ids: [taskList_id] });
-  else file_lane.lane_ids.push(taskList_id);
-  kanban.settings['linked_file_lanes'] = file_lanes;
+
+  let spec: Spec<KanbanSettings, never>;
+  if (file_lane_idx === -1)
+    spec = {
+      linked_file_lanes: { $push: [{ file, lane_ids: [taskList_id] }] },
+    };
+  else
+    spec = {
+      linked_file_lanes: {
+        [file_lane_idx]: { lane_ids: { $push: [taskList_id] } },
+      },
+    };
+
+  kanban.settings = update(kanban.settings, spec);
   await kanban.saveSettings();
   console.log('add to', kanban.settings);
 }
@@ -241,15 +253,29 @@ export async function removeLaneFromSettings(
   taskList_id: string
 ) {
   const file_lanes = kanban.settings['linked_file_lanes'] ?? [];
-  const file_lane = file_lanes.find(
+  const file_lane_idx = file_lanes.findIndex(
     (file_lane) => file_lane.file.name === file.name
   );
-  if (!file_lane) console.error('file lane not found');
-  else
-    file_lane.lane_ids.splice(
-      file_lane.lane_ids.findIndex((lane_id) => lane_id === taskList_id)
+
+  let spec: Spec<KanbanSettings, never> = {};
+  if (file_lane_idx === -1) console.error('file lane not found in settings');
+  else {
+    const lane_id_idx = file_lanes[file_lane_idx].lane_ids.findIndex(
+      (lane_id) => lane_id === taskList_id
     );
-  kanban.settings['linked_file_lanes'] = file_lanes;
+    if (lane_id_idx !== -1)
+      spec = {
+        linked_file_lanes: {
+          [file_lane_idx]: {
+            lane_ids: {
+              $splice: [[lane_id_idx, 1]],
+            },
+          },
+        },
+      };
+  }
+
+  kanban.settings = update(kanban.settings, spec);
   await kanban.saveSettings();
   console.log('remove from', kanban.settings);
 }

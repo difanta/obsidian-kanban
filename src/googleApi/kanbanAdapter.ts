@@ -86,8 +86,9 @@ export function taskToItem(
       title: task.title,
       titleRaw:
         task.title +
-        (task.due
-          ? ` ${dateTrigger}{${dateStr}} ${timeTrigger}{${timeStr}}`
+        (date
+          ? ` ${dateTrigger}{${dateStr}}` +
+            (time ? ` ${timeTrigger}{${timeStr}}` : '')
           : ''),
       isComplete: task.status === 'completed' ? true : false,
       titleSearch: task.title,
