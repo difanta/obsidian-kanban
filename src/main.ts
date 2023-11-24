@@ -135,8 +135,14 @@ export default class KanbanPlugin extends Plugin {
     register(this);
 
     app.workspace.onLayoutReady(async () => {
-      console.log('First run');
-      await syncLanesFromGTask(this.settings['linked_file_lanes'] ?? [], this);
+      try {
+        await syncLanesFromGTask(
+          this.settings['linked_file_lanes'] ?? [],
+          this
+        );
+      } catch (error) {
+        console.error(error);
+      }
       this.setRefreshInterval();
     });
   }
@@ -663,17 +669,19 @@ export default class KanbanPlugin extends Plugin {
   }
 
   setRefreshInterval() {
-    console.log('Interval set');
     if (this.GTaskRefresher) {
       window.clearInterval(this.GTaskRefresher);
     }
     this.registerInterval(
       (this.GTaskRefresher = window.setInterval(async () => {
-        console.log('Interval run');
-        await syncLanesFromGTask(
-          this.settings['linked_file_lanes'] || [],
-          this
-        );
+        try {
+          await syncLanesFromGTask(
+            this.settings['linked_file_lanes'] || [],
+            this
+          );
+        } catch (error) {
+          console.error(error);
+        }
       }, (this.settings.refreshInterval || defaultRefreshInterval) * 1000))
     );
   }

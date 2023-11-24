@@ -45,9 +45,13 @@ export interface BoardModifiers {
     path: Path,
     taskList_id: string,
     plugin: KanbanPlugin,
-    file: TFile
+    file_path: string
   ) => void;
-  unlinkFromGTask: (path: Path, plugin: KanbanPlugin, file: TFile) => void;
+  unlinkFromGTask: (
+    path: Path,
+    plugin: KanbanPlugin,
+    file_path: string
+  ) => void;
 }
 
 export function getBoardModifiers(
@@ -374,20 +378,20 @@ export function getBoardModifiers(
       path: Path,
       taskList_id: string,
       kanban: KanbanPlugin,
-      file: TFile
+      file_path: string
     ) => {
       stateManager.setState(async (boardData) => {
-        await addLaneToSettings(kanban, file, taskList_id);
+        await addLaneToSettings(kanban, file_path, taskList_id);
         return updateEntity(boardData, path, {
           data: { blockId: { $set: taskList_id } },
         });
       });
     },
-    unlinkFromGTask: (path: Path, kanban: KanbanPlugin, file: TFile) => {
+    unlinkFromGTask: (path: Path, kanban: KanbanPlugin, file_path: string) => {
       stateManager.setState(async (boardData) => {
         const entity = getEntityFromPath(boardData, path);
 
-        await removeLaneFromSettings(kanban, file, entity.data.blockId);
+        await removeLaneFromSettings(kanban, file_path, entity.data.blockId);
         return updateEntity(boardData, path, { data: { $unset: ['blockId'] } });
       });
     },

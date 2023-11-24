@@ -129,21 +129,21 @@ export async function getAllTasksFromList(
       }
     } while (allTasksData.nextPageToken);
 
-    resultTaskList.forEach((task: Task) => {
-      if (task.due) {
-        task.due = window.moment(task.due).toISOString();
-      }
-      task.children = resultTaskList.filter(
-        (foundTask: Task) => foundTask.parent == task.id
-      );
-      if (task.children.length) {
-        task.children.sort(
-          (a: Task, b: Task) => parseInt(a.position) - parseInt(b.position)
+    const join_child_tasks_to_parent = false;
+    if (join_child_tasks_to_parent) {
+      resultTaskList.forEach((task: Task) => {
+        task.children = resultTaskList.filter(
+          (foundTask: Task) => foundTask.parent == task.id
         );
-      }
-    });
+        if (task.children.length) {
+          task.children.sort(
+            (a: Task, b: Task) => parseInt(a.position) - parseInt(b.position)
+          );
+        }
+      });
 
-    resultTaskList = resultTaskList.filter((tasks) => !tasks.parent);
+      resultTaskList = resultTaskList.filter((tasks) => !tasks.parent);
+    }
 
     return resultTaskList;
   } catch (error) {

@@ -6,6 +6,7 @@ import { moment } from 'obsidian';
 import { generateInstanceId } from 'src/components/helpers';
 import { StateManager } from 'src/StateManager';
 import { HeadlessStateManager } from './HeadlessStateManager';
+import update from 'immutability-helper';
 
 export function ItemToTaskInput(item: Item, lane: Lane): TaskInput {
   return {
@@ -24,7 +25,6 @@ export async function ItemToTask(
   taskListId: string,
   deleting: boolean
 ): Promise<Task> {
-  console.log(item);
   const oldTask = await getOneTaskById(plugin, item.data.blockId, taskListId);
   if (!oldTask) throw new Error('task not found');
 
@@ -50,20 +50,30 @@ export function taskListToLane(
   oldLane?: Lane,
   items?: Item[]
 ): Lane {
-  return {
-    children: items ?? [],
-    id: oldLane?.id ?? generateInstanceId(),
-    data: {
-      title: taskList.title,
-      blockId: taskList.id,
-      shouldMarkItemsComplete: oldLane?.data.shouldMarkItemsComplete,
-      maxItems: oldLane?.data.maxItems,
-      dom: oldLane?.data.dom,
-      forceEditMode: oldLane?.data.forceEditMode,
-      sorted: oldLane?.data.sorted,
-    },
-    ...LaneTemplate,
-  };
+  if (oldLane)
+    return update(oldLane, {
+      children: {
+        $set: items ?? [],
+      },
+      data: {
+        title: {
+          $set: taskList.title,
+        },
+        blockId: {
+          $set: taskList.id,
+        },
+      },
+    });
+  else
+    return {
+      children: items ?? [],
+      id: generateInstanceId(),
+      data: {
+        title: taskList.title,
+        blockId: taskList.id,
+      },
+      ...LaneTemplate,
+    };
 }
 
 export function taskToItem(
@@ -79,33 +89,60 @@ export function taskToItem(
   const timeStr = oldItem?.data.metadata.timeStr;
   const time = oldItem?.data.metadata.time;
 
-  return {
-    id: oldItem?.id ?? generateInstanceId(),
-    data: {
-      blockId: task.id,
-      title: task.title,
-      titleRaw:
-        task.title +
-        (date
-          ? ` ${dateTrigger}{${dateStr}}` +
-            (time ? ` ${timeTrigger}{${timeStr}}` : '')
-          : ''),
-      isComplete: task.status === 'completed' ? true : false,
-      titleSearch: task.title,
-      metadata: {
-        date: date,
-        dateStr,
-        time,
-        timeStr,
-        fileAccessor: oldItem?.data.metadata.fileAccessor,
-        file: oldItem?.data.metadata.file,
-        fileMetadata: oldItem?.data.metadata.fileMetadata,
-        fileMetadataOrder: oldItem?.data.metadata.fileMetadataOrder,
-        tags: oldItem?.data.metadata.tags ?? [],
+  const titleRaw =
+    task.title +
+    (date
+      ? ` ${dateTrigger}{${dateStr}}` +
+        (time ? ` ${timeTrigger}{${timeStr}}` : '')
+      : '');
+
+  if (oldItem)
+    return update(oldItem, {
+      data: {
+        blockId: { $set: task.id },
+        title: { $set: task.title },
+        titleRaw: {
+          $set: titleRaw,
+        },
+        titleSearch: {
+          $set: task.title,
+        },
+        isComplete: {
+          $set: task.status === 'completed' ? true : false,
+        },
+        metadata: {
+          date: {
+            $set: date,
+          },
+          dateStr: {
+            $set: dateStr,
+          },
+          time: {
+            $set: time,
+          },
+          timeStr: {
+            $set: timeStr,
+          },
+        },
       },
-      dom: oldItem?.data.dom,
-      forceEditMode: oldItem?.data.forceEditMode,
-    },
-    ...ItemTemplate,
-  };
+    });
+  else
+    return {
+      id: generateInstanceId(),
+      data: {
+        blockId: task.id,
+        title: task.title,
+        titleRaw,
+        titleSearch: task.title,
+        isComplete: task.status === 'completed' ? true : false,
+        metadata: {
+          date,
+          dateStr,
+          time,
+          timeStr,
+          tags: [],
+        },
+      },
+      ...ItemTemplate,
+    };
 }

@@ -1,7 +1,7 @@
 import { TFile } from 'obsidian';
 
 export type LinkedFileLanes = {
-  file: TFile;
+  file_path: string;
   lane_ids: string[];
 };
 

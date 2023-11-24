@@ -234,7 +234,11 @@ export function useSettingsMenu({
           .setTitle(linked ? 'Unlink from Google Task' : 'Link to Google Task')
           .onClick(() => {
             linked
-              ? boardModifiers.unlinkFromGTask(path, view.plugin, view.file)
+              ? boardModifiers.unlinkFromGTask(
+                  path,
+                  view.plugin,
+                  view.file.path
+                )
               : new LinkToGTaskList(view, path, lane, boardModifiers).open();
           });
       });
@@ -311,7 +315,7 @@ export class LinkToGTaskList extends Modal {
       this.path,
       this.select.value,
       this.view.plugin,
-      this.view.file
+      this.view.file.path
     );
   }
 }

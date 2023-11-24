@@ -1,4 +1,4 @@
-import { TFile } from 'obsidian';
+import { TAbstractFile, TFile } from 'obsidian';
 import { DataTypes, Item, Lane } from '../components/types';
 import { CreateGoogleTask } from './GoogleCreateTask';
 import { UpdateGoogleTask } from './GoogleUpdateTask';
@@ -75,6 +75,23 @@ export function register(plugin: KanbanPlugin) {
       }
     )
   );
+
+  plugin.registerEvent(
+    this.app.vault.on(
+      'rename',
+      async (file: TAbstractFile, oldPath: string) => {
+        if (file instanceof TFile)
+          await changeFileLaneName(plugin, oldPath, file.path);
+      }
+    )
+  );
+
+  plugin.registerEvent(
+    this.app.vault.on('delete', async (file: TAbstractFile) => {
+      if (file instanceof TFile)
+        await removeFileFromSettings(plugin, file.path);
+    })
+  );
 }
 
 export async function syncLanesFromGTask(
@@ -84,7 +101,13 @@ export async function syncLanesFromGTask(
   console.log('sync', plugin.settings);
   const GTaskLists = await getAllTaskLists(plugin);
   await Promise.all(
-    file_lanes.map(async ({ file, lane_ids }) => {
+    file_lanes.map(async ({ file_path, lane_ids }) => {
+      const file = app.vault.getFiles().find((file) => file.path === file_path);
+      if (!file) {
+        await removeFileFromSettings(plugin, file_path);
+        throw new Error('File not found');
+      }
+
       const stateManager =
         plugin.getStateManager(file) ??
         new HeadlessStateManager(
@@ -108,11 +131,6 @@ export async function syncLanesFromGTask(
             return removeLane(plugin, stateManager, lane_id, path);
 
           let tasks = await getAllTasksFromList(plugin, GTaskList.id);
-          /*tasks = await Promise.all(
-            tasks.map(async (task) => {
-              return await getOneTaskById(plugin, task.id, GTaskList.id);
-            })
-          );*/
 
           const { mergedTaskList, mergedLane } = await mergeTaskListAndLane(
             stateManager,
@@ -217,23 +235,23 @@ export async function removeLane(
 ) {
   if (path) getBoardModifiers(stateManager).deleteEntity(path);
   // remove from settings
-  await removeLaneFromSettings(plugin, stateManager.file, lane_id);
+  await removeLaneFromSettings(plugin, stateManager.file.name, lane_id);
 }
 
 export async function addLaneToSettings(
   kanban: KanbanPlugin,
-  file: TFile,
+  file_path: string,
   taskList_id: string
 ) {
   const file_lanes = kanban.settings['linked_file_lanes'] ?? [];
   const file_lane_idx = file_lanes.findIndex(
-    (file_lane) => file_lane.file.name === file.name
+    (file_lane) => file_lane.file_path === file_path
   );
 
   let spec: Spec<KanbanSettings, never>;
   if (file_lane_idx === -1)
     spec = {
-      linked_file_lanes: { $push: [{ file, lane_ids: [taskList_id] }] },
+      linked_file_lanes: { $push: [{ file_path, lane_ids: [taskList_id] }] },
     };
   else
     spec = {
@@ -244,17 +262,16 @@ export async function addLaneToSettings(
 
   kanban.settings = update(kanban.settings, spec);
   await kanban.saveSettings();
-  console.log('add to', kanban.settings);
 }
 
 export async function removeLaneFromSettings(
   kanban: KanbanPlugin,
-  file: TFile,
+  file_path: string,
   taskList_id: string
 ) {
   const file_lanes = kanban.settings['linked_file_lanes'] ?? [];
   const file_lane_idx = file_lanes.findIndex(
-    (file_lane) => file_lane.file.name === file.name
+    (file_lane) => file_lane.file_path === file_path
   );
 
   let spec: Spec<KanbanSettings, never> = {};
@@ -277,5 +294,47 @@ export async function removeLaneFromSettings(
 
   kanban.settings = update(kanban.settings, spec);
   await kanban.saveSettings();
-  console.log('remove from', kanban.settings);
+}
+
+export async function removeFileFromSettings(
+  kanban: KanbanPlugin,
+  file_path: string
+) {
+  const file_lanes = kanban.settings['linked_file_lanes'] ?? [];
+  const file_lane_idx = file_lanes.findIndex(
+    (file_lane) => file_lane.file_path === file_path
+  );
+
+  if (file_lane_idx !== -1) {
+    kanban.settings = update(kanban.settings, {
+      linked_file_lanes: {
+        $splice: [[file_lane_idx, 1]],
+      },
+    });
+    await kanban.saveSettings();
+  }
+}
+
+export async function changeFileLaneName(
+  kanban: KanbanPlugin,
+  oldPath: string,
+  newPath: string
+) {
+  const file_lanes = kanban.settings['linked_file_lanes'] ?? [];
+  const file_lane_idx = file_lanes.findIndex(
+    (file_lane) => file_lane.file_path === oldPath
+  );
+
+  if (file_lane_idx !== -1) {
+    kanban.settings = update(kanban.settings, {
+      linked_file_lanes: {
+        [file_lane_idx]: {
+          file_path: {
+            $set: newPath,
+          },
+        },
+      },
+    });
+    await kanban.saveSettings();
+  }
 }
